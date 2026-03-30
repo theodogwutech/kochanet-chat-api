@@ -6,6 +6,11 @@ export enum MessageType {
   AI = 'ai',
 }
 
+export interface IReaction {
+  emoji: string;
+  users: Types.ObjectId[];
+}
+
 export interface IMessage {
   chatId: Types.ObjectId;
   senderId: Types.ObjectId;
@@ -16,6 +21,7 @@ export interface IMessage {
   audioUrl?: string;
   voiceTranscription?: string;
   readBy: Types.ObjectId[];
+  reactions: IReaction[];
   isEdited: boolean;
   isDeleted: boolean;
   createdAt: Date;

@@ -145,4 +145,80 @@ export class MessageRepository {
       })
       .exec();
   }
+
+  /**
+   * Add or toggle reaction to a message
+   */
+  async toggleReaction(
+    messageId: string,
+    userId: string,
+    emoji: string,
+  ): Promise<IMessageDocument | null> {
+    const message = await this.messageModel.findById(messageId);
+
+    if (!message) {
+      return null;
+    }
+
+    // Find if this emoji already exists
+    const reactionIndex = message.reactions.findIndex((r) => r.emoji === emoji);
+
+    if (reactionIndex === -1) {
+      // Emoji doesn't exist, add new reaction
+      message.reactions.push({
+        emoji,
+        users: [new Types.ObjectId(userId)],
+      });
+    } else {
+      // Emoji exists, toggle user
+      const userIndex = message.reactions[reactionIndex].users.findIndex(
+        (u) => u.toString() === userId,
+      );
+
+      if (userIndex === -1) {
+        // User hasn't reacted with this emoji, add them
+        message.reactions[reactionIndex].users.push(new Types.ObjectId(userId));
+      } else {
+        // User already reacted, remove them
+        message.reactions[reactionIndex].users.splice(userIndex, 1);
+
+        // If no more users have this reaction, remove the emoji
+        if (message.reactions[reactionIndex].users.length === 0) {
+          message.reactions.splice(reactionIndex, 1);
+        }
+      }
+    }
+
+    await message.save();
+
+    // Populate senderId before returning
+    const populatedMessage = await this.messageModel
+      .findById(messageId)
+      .populate('senderId', '-password')
+      .exec();
+
+    return populatedMessage || message;
+  }
+
+  /**
+   * Search messages in a chat by text query
+   */
+  async searchMessages(
+    chatId: string,
+    query: string,
+    limit: number = 50,
+  ): Promise<IMessageDocument[]> {
+    const searchRegex = new RegExp(query, 'i'); // Case-insensitive regex search
+
+    return await this.messageModel
+      .find({
+        chatId: new Types.ObjectId(chatId),
+        content: { $regex: searchRegex },
+        isDeleted: false,
+      })
+      .populate('senderId', '-password')
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .exec();
+  }
 }

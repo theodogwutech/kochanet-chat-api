@@ -103,6 +103,28 @@ export class ChatController {
     });
   }
 
+  @Patch(':id/tags')
+  async updateTags(
+    @Param('id') chatId: string,
+    @CurrentUser() user: IUserDocument,
+    @Body() body: { tags: string[] },
+    @Res() res: Response,
+  ) {
+    const result = await this.chatService.updateTags({
+      chatId,
+      userId: user._id.toString(),
+      tags: body.tags,
+    });
+
+    this.utils.apiResponse({
+      res,
+      success: result.success,
+      code: result.code,
+      message: result.message,
+      data: result.data,
+    });
+  }
+
   @Delete(':id/leave')
   async leaveChat(
     @Param('id') chatId: string,

@@ -28,6 +28,12 @@ export const MessageSchema = new Schema(
     audioUrl: { type: String },
     voiceTranscription: { type: String },
     readBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    reactions: [
+      {
+        emoji: { type: String, required: true },
+        users: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+      },
+    ],
     isEdited: { type: Boolean, default: false },
     isDeleted: { type: Boolean, default: false },
   },

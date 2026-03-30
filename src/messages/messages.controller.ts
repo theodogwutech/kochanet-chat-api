@@ -13,6 +13,7 @@ import {
 import { Response } from 'express';
 import { MessagesService } from './messages.service';
 import { CreateMessageDto } from './dto/create-message.dto';
+import { UpdateMessageDto } from './dto/update-message.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { ResponseUtil } from '../common/utils/response.util';
@@ -86,6 +87,60 @@ export class MessagesController {
       success: result.success,
       code: result.code,
       message: result.message,
+    });
+  }
+
+  @Patch(':id')
+  async updateMessage(
+    @Param('id') messageId: string,
+    @CurrentUser() user: IUserDocument,
+    @Body() updateMessageDto: UpdateMessageDto,
+    @Res() res: Response,
+  ) {
+    const result = await this.messagesService.updateMessage(
+      messageId,
+      user._id.toString(),
+      updateMessageDto.content,
+    );
+
+    this.utils.apiResponse({
+      res,
+      success: result.success,
+      code: result.code,
+      message: result.message,
+      data: result.data,
+    });
+  }
+
+  @Get('chat/:chatId/search')
+  async searchMessages(
+    @Param('chatId') chatId: string,
+    @Query('q') query: string,
+    @CurrentUser() user: IUserDocument,
+    @Res() res: Response,
+  ) {
+    if (!query) {
+      this.utils.apiResponse({
+        res,
+        success: false,
+        code: 400,
+        message: 'Search query is required',
+      });
+      return;
+    }
+
+    const result = await this.messagesService.searchMessages(
+      chatId,
+      user._id.toString(),
+      query,
+    );
+
+    this.utils.apiResponse({
+      res,
+      success: result.success,
+      code: result.code,
+      message: result.message,
+      data: result.data,
     });
   }
 }

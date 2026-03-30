@@ -276,6 +276,64 @@ export class ChatService {
     }
   }
 
+  async updateTags(params: {
+    chatId: string;
+    userId: string;
+    tags: string[];
+  }) {
+    try {
+      const { chatId, userId, tags } = params;
+
+      const chat = await this.chatRepository.findById(chatId);
+
+      if (!chat) {
+        return {
+          success: false,
+          code: HttpStatus.NOT_FOUND,
+          message: 'Chat not found',
+        };
+      }
+
+      // Check if user is a participant
+      const isParticipant = await this.chatRepository.isParticipant(
+        chatId,
+        userId,
+      );
+
+      if (!isParticipant) {
+        return {
+          success: false,
+          code: HttpStatus.FORBIDDEN,
+          message: 'You are not a participant of this chat',
+        };
+      }
+
+      // Sanitize tags: trim, lowercase, remove duplicates
+      const sanitizedTags = [
+        ...new Set(tags.map((tag) => tag.trim().toLowerCase())),
+      ].filter((tag) => tag.length > 0);
+
+      const updatedChat = await this.chatRepository.update(chatId, {
+        tags: sanitizedTags,
+      });
+
+      return {
+        success: true,
+        code: HttpStatus.OK,
+        message: 'Tags updated successfully',
+        data: updatedChat,
+      };
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      return {
+        success: false,
+        code: HttpStatus.INTERNAL_SERVER_ERROR,
+        message: `Failed to update tags: ${errorMessage}`,
+      };
+    }
+  }
+
   // Internal methods for use by other services
   async updateLastActivity(chatId: string) {
     await this.chatRepository.updateLastActivity(chatId);

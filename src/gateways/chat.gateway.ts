@@ -99,9 +99,11 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       // Provide specific error messages based on error type
       if (error.name === 'JsonWebTokenError') {
         client.emit('error', {
-          message: 'Invalid token. Please login again with the correct credentials.',
+          message:
+            'Invalid token. Please login again with the correct credentials.',
           code: 'INVALID_TOKEN',
-          details: 'Token signature mismatch - you may be using a token from a different environment.',
+          details:
+            'Token signature mismatch - you may be using a token from a different environment.',
         });
       } else if (error.name === 'TokenExpiredError') {
         client.emit('error', {
@@ -205,7 +207,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       // Check for AI mention
       if (this.aiService.checkForAIMention(createMessageDto.content)) {
         // Process AI response asynchronously
-        this.handleAIMention(createMessageDto.chatId, message);
+        this.handleAIMention(createMessageDto.chatId, message, userId);
       }
 
       return {
@@ -264,7 +266,88 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     });
   }
 
-  private async handleAIMention(chatId: string, message: any) {
+  @SubscribeMessage('message:edit')
+  async handleMessageEdit(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() data: { messageId: string; content: string; chatId: string },
+  ) {
+    try {
+      const userId = client.userId;
+      if (!userId) {
+        return { event: 'error', data: { message: 'Unauthorized' } };
+      }
+
+      // Update message through service
+      const result = await this.messagesService.updateMessage(
+        data.messageId,
+        userId,
+        data.content,
+      );
+
+      if (!result.success) {
+        return { event: 'error', data: { message: result.message } };
+      }
+
+      // Broadcast updated message to chat room
+      this.server
+        .to(`chat:${data.chatId}`)
+        .emit('message:updated', result.data);
+
+      return {
+        event: 'message:edited',
+        data: result.data,
+      };
+    } catch (error: any) {
+      console.error('Error editing message:', error);
+      return {
+        event: 'error',
+        data: { message: error.message },
+      };
+    }
+  }
+
+  @SubscribeMessage('message:react')
+  async handleMessageReaction(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() data: { messageId: string; emoji: string; chatId: string },
+  ) {
+    try {
+      const userId = client.userId;
+      if (!userId) {
+        return { event: 'error', data: { message: 'Unauthorized' } };
+      }
+
+      // Toggle reaction through service
+      const result = await this.messagesService.toggleReaction(
+        data.messageId,
+        userId,
+        data.emoji,
+      );
+
+      if (!result.success) {
+        return { event: 'error', data: { message: result.message } };
+      }
+
+      // Broadcast reaction update to chat room
+      this.server.to(`chat:${data.chatId}`).emit('message:reaction', {
+        messageId: data.messageId,
+        reactions: result.data?.reactions || [],
+      });
+
+      return {
+        event: 'message:reacted',
+        data: result.data,
+      };
+    } catch (error: any) {
+      console.error('Error reacting to message:', error);
+      return {
+        event: 'error',
+        data: { message: error.message },
+      };
+    }
+  }
+
+  private async handleAIMention(chatId: string, message: any, userId: string) {
     try {
       // Show AI is typing
       this.server.to(`chat:${chatId}`).emit('typing:start', {
@@ -273,29 +356,55 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         userName: 'AI Assistant',
       });
 
-      // Get AI response
-      const aiResult = await this.aiService.processAIMention(chatId, message);
+      // Stream AI response with rate limiting
+      for await (const chunk of this.aiService.streamAIMention(
+        chatId,
+        message,
+        userId,
+      )) {
+        if (chunk.type === 'start') {
+          // Emit stream start event with rate limit info
+          this.server.to(`chat:${chatId}`).emit('ai:stream:start', {
+            chatId,
+            rateLimit: chunk.rateLimit,
+          });
+        } else if (chunk.type === 'chunk') {
+          // Emit each chunk
+          this.server.to(`chat:${chatId}`).emit('ai:stream:chunk', {
+            chatId,
+            content: chunk.content,
+          });
+        } else if (chunk.type === 'end') {
+          // Stream complete - broadcast final message
+          this.server.to(`chat:${chatId}`).emit('ai:stream:end', {
+            chatId,
+            message: chunk.data,
+          });
+          // Also emit regular message:new for consistency
+          this.server.to(`chat:${chatId}`).emit('message:new', chunk.data);
+        } else if (chunk.type === 'error') {
+          this.server.to(`chat:${chatId}`).emit('ai:stream:error', {
+            chatId,
+            error: chunk.content,
+            rateLimit: chunk.rateLimit,
+          });
+        }
+      }
 
       // Stop AI typing
       this.server.to(`chat:${chatId}`).emit('typing:stop', {
         chatId,
         userId: 'ai',
       });
-
-      // Broadcast AI message
-      if (aiResult.success) {
-        console.log('Broadcasting AI message to chat room:', `chat:${chatId}`);
-        console.log('AI message data:', JSON.stringify(aiResult.data).substring(0, 200));
-        this.server.to(`chat:${chatId}`).emit('message:new', aiResult.data);
-        console.log('AI message broadcast completed');
-      } else {
-        console.error('AI result was not successful:', aiResult);
-      }
     } catch (error) {
       console.error('Error handling AI mention:', error);
       this.server.to(`chat:${chatId}`).emit('typing:stop', {
         chatId,
         userId: 'ai',
+      });
+      this.server.to(`chat:${chatId}`).emit('ai:stream:error', {
+        chatId,
+        error: 'An error occurred while processing your request.',
       });
     }
   }
@@ -345,9 +454,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       // Get all users in the chat
       const participantIds = chat.participants.map((p) => p.toString());
-      const chatParticipants = await this.usersService.getUsersByIds(
-        participantIds,
-      );
+      const chatParticipants =
+        await this.usersService.getUsersByIds(participantIds);
 
       // Find mentioned users by username
       for (const mentionedUsername of message.mentions) {
@@ -359,9 +467,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
         if (mentionedUser && mentionedUser._id.toString() !== senderId) {
           // Get socket IDs for the mentioned user
-          const socketIds = this.userSockets.get(
-            mentionedUser._id.toString(),
-          );
+          const socketIds = this.userSockets.get(mentionedUser._id.toString());
 
           if (socketIds && socketIds.length > 0) {
             // Send mention notification to each socket

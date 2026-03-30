@@ -17,6 +17,12 @@ export class AIService {
   private readonly aiName: string;
   private readonly model: string;
   private readonly maxContextMessages: number;
+  private readonly maxContextTokens: number;
+  private conversationSummaries: Map<string, string> = new Map();
+  private userRequestCounts: Map<string, { count: number; resetTime: number }> =
+    new Map();
+  private readonly rateLimit: number;
+  private readonly rateLimitWindow: number; // in milliseconds
 
   constructor(
     private configService: ConfigService,
@@ -31,6 +37,50 @@ export class AIService {
     this.maxContextMessages = parseInt(
       this.configService.get<string>('AI_MAX_CONTEXT_MESSAGES') || '20',
     );
+    this.maxContextTokens = parseInt(
+      this.configService.get<string>('AI_MAX_CONTEXT_TOKENS') || '2000',
+    );
+    this.rateLimit = parseInt(
+      this.configService.get<string>('AI_RATE_LIMIT') || '10',
+    ); // 10 requests
+    this.rateLimitWindow = parseInt(this.configService.get<string>('AI_RATE_LIMIT_WINDOW') || '5') * 60000; // 5 minutes in ms
+  }
+
+  private checkRateLimit(userId: string): { allowed: boolean; remaining: number; resetTime: number } {
+    const now = Date.now();
+    const userLimit = this.userRequestCounts.get(userId);
+
+    if (!userLimit || now >= userLimit.resetTime) {
+      // First request or window expired, reset
+      this.userRequestCounts.set(userId, {
+        count: 1,
+        resetTime: now + this.rateLimitWindow,
+      });
+      return {
+        allowed: true,
+        remaining: this.rateLimit - 1,
+        resetTime: now + this.rateLimitWindow,
+      };
+    }
+
+    if (userLimit.count >= this.rateLimit) {
+      // Rate limit exceeded
+      return {
+        allowed: false,
+        remaining: 0,
+        resetTime: userLimit.resetTime,
+      };
+    }
+
+    // Increment count
+    userLimit.count++;
+    this.userRequestCounts.set(userId, userLimit);
+
+    return {
+      allowed: true,
+      remaining: this.rateLimit - userLimit.count,
+      resetTime: userLimit.resetTime,
+    };
   }
 
   async processAIMention(
@@ -88,6 +138,65 @@ export class AIService {
     }
   }
 
+  async *streamAIMention(
+    chatId: string,
+    mentionMessage: IMessageDocument,
+    userId?: string,
+  ): AsyncGenerator<{ type: string; content?: string; data?: any; rateLimit?: any }> {
+    try {
+      // Check rate limit if userId is provided
+      if (userId) {
+        const rateLimitCheck = this.checkRateLimit(userId);
+
+        if (!rateLimitCheck.allowed) {
+          const resetTimeMinutes = Math.ceil((rateLimitCheck.resetTime - Date.now()) / 60000);
+          yield {
+            type: 'error',
+            content: `Rate limit exceeded. You can make ${this.rateLimit} AI requests every ${this.rateLimitWindow / 60000} minutes. Please try again in ${resetTimeMinutes} minute(s).`,
+            rateLimit: rateLimitCheck,
+          };
+          return;
+        }
+
+        // Yield rate limit info with start event
+        yield { type: 'start', rateLimit: rateLimitCheck };
+      } else {
+        yield { type: 'start' };
+      }
+
+      // Get recent messages for context
+      const recentMessages = await this.messagesService.getRecentMessages(
+        chatId,
+        this.maxContextMessages,
+      );
+
+      // Build smart conversation context with summarization
+      const context = await this.buildSmartContext(chatId, recentMessages);
+
+      let fullResponse = '';
+      // Stream AI response
+      for await (const chunk of this.streamAIResponse(context)) {
+        fullResponse += chunk;
+        yield { type: 'chunk', content: chunk };
+      }
+
+      // Save complete AI message to database
+      const aiMessage = await this.messagesService.createAIMessage(
+        chatId,
+        fullResponse,
+      );
+
+      yield { type: 'end', data: aiMessage };
+    } catch (error) {
+      console.error('Error streaming AI mention:', error);
+      yield {
+        type: 'error',
+        content:
+          "I'm sorry, I encountered an error while processing your request.",
+      };
+    }
+  }
+
   async transcribeAudio(audioBuffer: Buffer): Promise<string> {
     try {
       // Create a file-like object from buffer
@@ -122,6 +231,92 @@ export class AIService {
       console.error('Error generating speech:', error);
       throw new Error('Failed to generate speech');
     }
+  }
+
+  private estimateTokenCount(text: string): number {
+    // Rough estimation: 1 token ≈ 4 characters for English text
+    return Math.ceil(text.length / 4);
+  }
+
+  private async summarizeConversation(
+    messages: IMessageDocument[],
+  ): Promise<string> {
+    const conversationText = messages
+      .map((msg: any) => {
+        const sender = msg.isAI ? this.aiName : msg.senderId.name;
+        return `${sender}: ${msg.content}`;
+      })
+      .join('\n');
+
+    try {
+      const completion = await this.openai.chat.completions.create({
+        model: this.model,
+        messages: [
+          {
+            role: 'system',
+            content:
+              'You are a helpful assistant that summarizes conversations. Provide a concise summary of the key points discussed.',
+          },
+          {
+            role: 'user',
+            content: `Summarize the following conversation:\n\n${conversationText}`,
+          },
+        ],
+        temperature: 0.3,
+        max_tokens: 200,
+      });
+
+      return completion.choices[0]?.message?.content || 'Unable to generate summary.';
+    } catch (error) {
+      console.error('Error summarizing conversation:', error);
+      return 'Previous conversation context unavailable.';
+    }
+  }
+
+  private async buildSmartContext(
+    chatId: string,
+    messages: IMessageDocument[],
+  ): Promise<string> {
+    // Reverse to get chronological order
+    const sortedMessages = messages.reverse();
+
+    // Build recent context
+    const recentContext = sortedMessages
+      .map((msg: any) => {
+        const sender = msg.isAI ? this.aiName : msg.senderId.name;
+        return `${sender}: ${msg.content}`;
+      })
+      .join('\n');
+
+    const tokenCount = this.estimateTokenCount(recentContext);
+
+    // If within token limit, return as-is
+    if (tokenCount <= this.maxContextTokens) {
+      return recentContext;
+    }
+
+    console.log(
+      `Context too long (${tokenCount} tokens), using smart summarization...`,
+    );
+
+    // Split messages into old and recent
+    const splitIndex = Math.floor(sortedMessages.length / 2);
+    const oldMessages = sortedMessages.slice(0, splitIndex);
+    const recentMessages = sortedMessages.slice(splitIndex);
+
+    // Summarize old messages
+    const summary = await this.summarizeConversation(oldMessages);
+    this.conversationSummaries.set(chatId, summary);
+
+    // Build context with summary + recent messages
+    const recentText = recentMessages
+      .map((msg: any) => {
+        const sender = msg.isAI ? this.aiName : msg.senderId.name;
+        return `${sender}: ${msg.content}`;
+      })
+      .join('\n');
+
+    return `[Previous conversation summary: ${summary}]\n\nRecent messages:\n${recentText}`;
   }
 
   private buildContext(messages: IMessageDocument[]): string {
@@ -161,6 +356,34 @@ Be professional, friendly, and supportive. If you don't know something, admit it
       completion.choices[0]?.message?.content ||
       'I apologize, but I could not generate a response.'
     );
+  }
+
+  async *streamAIResponse(context: string): AsyncGenerator<string> {
+    const systemPrompt = `You are ${this.aiName}, a helpful AI assistant in a team workspace chat.
+Your role is to provide accurate, concise, and helpful responses to questions and discussions.
+You can see the conversation history and should provide contextual responses.
+Be professional, friendly, and supportive. If you don't know something, admit it.`;
+
+    const stream = await this.openai.chat.completions.create({
+      model: this.model,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        {
+          role: 'user',
+          content: `Conversation history:\n${context}\n\nProvide a helpful response:`,
+        },
+      ],
+      temperature: 0.7,
+      max_tokens: 500,
+      stream: true,
+    });
+
+    for await (const chunk of stream) {
+      const content = chunk.choices[0]?.delta?.content;
+      if (content) {
+        yield content;
+      }
+    }
   }
 
   checkForAIMention(content: string): boolean {
@@ -210,7 +433,10 @@ Be professional, friendly, and supportive. If you don't know something, admit it
       };
     } catch (error) {
       console.error('Error in transcribeAudioForChat:', error);
-      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+      console.error(
+        'Error stack:',
+        error instanceof Error ? error.stack : 'No stack trace',
+      );
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error';
       return {

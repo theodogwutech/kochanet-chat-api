@@ -14,6 +14,7 @@ export interface IChat {
   lastMessage?: Types.ObjectId;
   lastActivity: Date;
   isActive: boolean;
+  tags: string[];
   createdAt: Date;
   updatedAt: Date;
 }

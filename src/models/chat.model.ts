@@ -24,6 +24,7 @@ export const ChatSchema = new Schema(
     lastMessage: { type: mongoose.Schema.Types.ObjectId, ref: 'Message' },
     lastActivity: { type: Date, default: Date.now },
     isActive: { type: Boolean, default: true },
+    tags: [{ type: String, trim: true, lowercase: true }],
   },
   { timestamps: true },
 );
