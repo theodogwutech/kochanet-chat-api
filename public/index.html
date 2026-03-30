@@ -1290,12 +1290,15 @@
 
         function appendMessage(message) {
             const container = document.getElementById('messagesContainer');
-            const isOwn = message.senderId._id === currentUser._id || message.senderId === currentUser._id;
+
+            // Handle AI messages with null senderId
+            const isOwn = message.senderId && (message.senderId._id === currentUser._id || message.senderId === currentUser._id);
 
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${isOwn ? 'own' : ''}`;
 
-            const senderName = message.senderId.name || 'Unknown';
+            // Handle AI messages (senderId is null for AI)
+            const senderName = message.isAI ? 'AI Assistant' : (message.senderId?.name || 'Unknown');
             const time = new Date(message.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
             const aiBadge = message.isAI ? '<span class="ai-badge">AI</span>' : '';
 

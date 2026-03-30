@@ -47,16 +47,22 @@ export class AIService {
       console.log('mentionMessage messages for context:', mentionMessage);
 
       // Build conversation context
+      console.log('Building context from recent messages...');
       const context = this.buildContext(recentMessages);
+      console.log('Context built, length:', context.length);
 
       // Get AI response
+      console.log('Calling OpenAI API with model:', this.model);
       const aiResponse = await this.getAIResponse(context);
+      console.log('AI response received:', aiResponse.substring(0, 100));
 
       // Save AI message to database
+      console.log('Saving AI message to database...');
       const aiMessage = await this.messagesService.createAIMessage(
         chatId,
         aiResponse,
       );
+      console.log('AI message saved successfully');
 
       return {
         success: true,

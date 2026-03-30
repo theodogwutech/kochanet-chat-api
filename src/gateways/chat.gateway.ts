@@ -284,7 +284,12 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       // Broadcast AI message
       if (aiResult.success) {
+        console.log('Broadcasting AI message to chat room:', `chat:${chatId}`);
+        console.log('AI message data:', JSON.stringify(aiResult.data).substring(0, 200));
         this.server.to(`chat:${chatId}`).emit('message:new', aiResult.data);
+        console.log('AI message broadcast completed');
+      } else {
+        console.error('AI result was not successful:', aiResult);
       }
     } catch (error) {
       console.error('Error handling AI mention:', error);
