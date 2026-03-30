@@ -52,13 +52,18 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       console.log('Token received:', token ? 'Yes' : 'No');
 
       if (!token) {
-        console.log('No token provided, disconnecting client');
+        console.log('❌ No token provided, disconnecting client');
+        client.emit('error', {
+          message: 'Authentication required. Please login.',
+          code: 'NO_TOKEN',
+        });
         client.disconnect();
         return;
       }
 
       // Verify token
       const payload: any = this.jwtService.verify(token);
+      console.log('✅ JWT verified successfully');
       console.log('JWT Payload:', JSON.stringify(payload, null, 2));
 
       // Try to extract user ID from various possible fields
@@ -84,10 +89,30 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         });
       }
 
-      console.log(`Client connected: ${client.id}, User: ${client.userId}`);
+      console.log(`✅ Client connected: ${client.id}, User: ${client.userId}`);
     } catch (error) {
-      console.error('Connection error:', error);
+      console.error('❌ Connection error:', error.name);
       console.error('Error details:', error.message);
+
+      // Provide specific error messages based on error type
+      if (error.name === 'JsonWebTokenError') {
+        client.emit('error', {
+          message: 'Invalid token. Please login again with the correct credentials.',
+          code: 'INVALID_TOKEN',
+          details: 'Token signature mismatch - you may be using a token from a different environment.',
+        });
+      } else if (error.name === 'TokenExpiredError') {
+        client.emit('error', {
+          message: 'Your session has expired. Please login again.',
+          code: 'TOKEN_EXPIRED',
+        });
+      } else {
+        client.emit('error', {
+          message: 'Authentication failed. Please try again.',
+          code: 'AUTH_ERROR',
+        });
+      }
+
       client.disconnect();
     }
   }
