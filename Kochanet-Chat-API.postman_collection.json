@@ -1,0 +1,619 @@
+{
+  "info": {
+    "name": "Kochanet Chat API",
+    "description": "Complete API collection for testing Kochanet Chat with AI Assistant",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Register User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"alice@example.com\",\n  \"name\": \"Alice\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "register"]
+            },
+            "description": "Register a new user account. Returns user data and JWT token."
+          }
+        },
+        {
+          "name": "Login User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"alice@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "Login with email and password. Returns user data and JWT token."
+          }
+        },
+        {
+          "name": "Verify Email",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"alice@example.com\",\n  \"otp\": \"123456\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/verify-email",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "verify-email"]
+            },
+            "description": "Verify user email with OTP code. Returns JWT token on success."
+          }
+        },
+        {
+          "name": "Resend OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"alice@example.com\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/resend-otp",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "resend-otp"]
+            },
+            "description": "Resend OTP code for email verification. Has rate limiting."
+          }
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"alice@example.com\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/forgot-password",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "forgot-password"]
+            },
+            "description": "Request password reset OTP. Sends OTP to user's email."
+          }
+        },
+        {
+          "name": "Verify OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"alice@example.com\",\n  \"otp\": \"123456\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/verify-otp",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "verify-otp"]
+            },
+            "description": "Verify password reset OTP. Returns token for password reset."
+          }
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"alice@example.com\",\n  \"otp\": \"123456\",\n  \"newPassword\": \"newPassword123\",\n  \"confirmPassword\": \"newPassword123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/reset-password",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "reset-password"]
+            },
+            "description": "Reset password using verified OTP. Passwords must match."
+          }
+        },
+        {
+          "name": "Google OAuth Login",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auth/google",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "google"]
+            },
+            "description": "Initiate Google OAuth login flow. Redirects to Google."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Get Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/users/profile",
+              "host": ["{{base_url}}"],
+              "path": ["users", "profile"]
+            },
+            "description": "Get current user's profile information."
+          }
+        },
+        {
+          "name": "Get All Users",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/users",
+              "host": ["{{base_url}}"],
+              "path": ["users"]
+            },
+            "description": "Get list of all users in the system."
+          }
+        },
+        {
+          "name": "Search Users",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/users/search?q=alice",
+              "host": ["{{base_url}}"],
+              "path": ["users", "search"],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "alice"
+                }
+              ]
+            },
+            "description": "Search users by name or email."
+          }
+        },
+        {
+          "name": "Update Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"online\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/users/status",
+              "host": ["{{base_url}}"],
+              "path": ["users", "status"]
+            },
+            "description": "Update user's online status (online/offline/away)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Chats",
+      "item": [
+        {
+          "name": "Create Group Chat",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Project Discussion\",\n  \"type\": \"group\",\n  \"participants\": [\"USER_ID_HERE\"],\n  \"isPrivate\": false\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/chat",
+              "host": ["{{base_url}}"],
+              "path": ["chat"]
+            },
+            "description": "Create a new group chat with multiple participants."
+          }
+        },
+        {
+          "name": "Create Direct Chat",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Direct Chat\",\n  \"type\": \"direct\",\n  \"participants\": [\"USER_ID_HERE\"],\n  \"isPrivate\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/chat",
+              "host": ["{{base_url}}"],
+              "path": ["chat"]
+            },
+            "description": "Create a direct chat between two users. Must have exactly 2 participants."
+          }
+        },
+        {
+          "name": "Get All Chats",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/chat",
+              "host": ["{{base_url}}"],
+              "path": ["chat"]
+            },
+            "description": "Get all chats where the current user is a participant."
+          }
+        },
+        {
+          "name": "Get Chat by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/chat/{{chat_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["chat", "{{chat_id}}"]
+            },
+            "description": "Get specific chat details with participants."
+          }
+        },
+        {
+          "name": "Add Participants",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"participants\": [\"USER_ID_1\", \"USER_ID_2\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/chat/{{chat_id}}/participants",
+              "host": ["{{base_url}}"],
+              "path": ["chat", "{{chat_id}}", "participants"]
+            },
+            "description": "Add participants to a group chat. Cannot add to direct chats."
+          }
+        },
+        {
+          "name": "Leave Chat",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/chat/{{chat_id}}/leave",
+              "host": ["{{base_url}}"],
+              "path": ["chat", "{{chat_id}}", "leave"]
+            },
+            "description": "Leave a chat. Chat becomes inactive if no participants remain."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Messages",
+      "item": [
+        {
+          "name": "Send Text Message",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"chatId\": \"{{chat_id}}\",\n  \"content\": \"Hello everyone!\",\n  \"type\": \"text\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/messages",
+              "host": ["{{base_url}}"],
+              "path": ["messages"]
+            },
+            "description": "Send a text message to a chat. Automatically extracts @mentions."
+          }
+        },
+        {
+          "name": "Send Message with AI Mention",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"chatId\": \"{{chat_id}}\",\n  \"content\": \"@ai what causes Docker containers to lose network connectivity after restart?\",\n  \"type\": \"text\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/messages",
+              "host": ["{{base_url}}"],
+              "path": ["messages"]
+            },
+            "description": "Send a message mentioning the AI assistant. AI will respond automatically via WebSocket."
+          }
+        },
+        {
+          "name": "Send Voice Message",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"chatId\": \"{{chat_id}}\",\n  \"content\": \"Voice message transcription here\",\n  \"type\": \"voice\",\n  \"audioUrl\": \"https://example.com/audio.mp3\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/messages",
+              "host": ["{{base_url}}"],
+              "path": ["messages"]
+            },
+            "description": "Send a voice message with transcription and audio URL."
+          }
+        },
+        {
+          "name": "Get Chat Messages",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/messages/chat/{{chat_id}}?limit=50&skip=0",
+              "host": ["{{base_url}}"],
+              "path": ["messages", "chat", "{{chat_id}}"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "50",
+                  "description": "Number of messages to retrieve"
+                },
+                {
+                  "key": "skip",
+                  "value": "0",
+                  "description": "Number of messages to skip (pagination)"
+                }
+              ]
+            },
+            "description": "Get messages from a chat with pagination support."
+          }
+        },
+        {
+          "name": "Mark Message as Read",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/messages/{{message_id}}/read",
+              "host": ["{{base_url}}"],
+              "path": ["messages", "{{message_id}}", "read"]
+            },
+            "description": "Mark a message as read. Adds current user to readBy array."
+          }
+        }
+      ]
+    },
+    {
+      "name": "AI",
+      "item": [
+        {
+          "name": "Transcribe Audio",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"chatId\": \"{{chat_id}}\",\n  \"audioData\": \"base64_encoded_audio_here\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/ai/transcribe",
+              "host": ["{{base_url}}"],
+              "path": ["ai", "transcribe"]
+            },
+            "description": "Transcribe base64-encoded audio using OpenAI Whisper. Creates a text message in the chat with transcription."
+          }
+        },
+        {
+          "name": "Text to Speech",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"chatId\": \"{{chat_id}}\",\n  \"text\": \"Hello, this is a test message for text to speech conversion.\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/ai/text-to-speech",
+              "host": ["{{base_url}}"],
+              "path": ["ai", "text-to-speech"]
+            },
+            "description": "Convert text to speech using OpenAI TTS. Returns base64-encoded audio data."
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "YOUR_JWT_TOKEN_HERE",
+      "type": "string"
+    },
+    {
+      "key": "chat_id",
+      "value": "YOUR_CHAT_ID_HERE",
+      "type": "string"
+    },
+    {
+      "key": "message_id",
+      "value": "YOUR_MESSAGE_ID_HERE",
+      "type": "string"
+    }
+  ]
+}

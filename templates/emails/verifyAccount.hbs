@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap"
+      rel="stylesheet"
+    />
+    <title>Verify Your Account</title>
+    <style type="text/css">
+      * {
+        padding: 0 !important;
+        margin: 0 !important;
+      }
+
+      a {
+        text-decoration: none;
+        color: #2563eb !important;
+        height: fit-content !important;
+      }
+
+      p {
+        color: #4b5563;
+      }
+
+      .body {
+        width: 680px !important;
+        margin: 0 auto !important;
+        padding: 51.67px 48px 75.35px !important;
+        font-family: "Inter", sans-serif;
+        background-color: #f9fafb;
+      }
+
+      .logo {
+        width: 88px !important;
+        height: auto;
+      }
+
+      .main_div {
+        border: 1px solid #e5e7eb;
+        margin: 46.76px auto 0 !important;
+        width: 520px;
+        max-width: 520px;
+        border-radius: 16px !important;
+        background-color: white;
+        box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+      }
+
+      .top_div {
+        padding: 48px 40px !important;
+      }
+
+      .user_name {
+        line-height: 32px !important;
+        font-size: 24px !important;
+        font-weight: 600;
+        color: #111827;
+        margin-bottom: 24px !important;
+      }
+
+      .content_text {
+        font-size: 16px !important;
+        line-height: 24px !important;
+        color: #4b5563;
+        font-weight: 400;
+        margin-bottom: 16px !important;
+      }
+
+      .content_text_span {
+        font-weight: 600;
+        color: #2563eb;
+      }
+
+      .otp_div {
+        background-color: #eff6ff;
+        border: 2px solid #2563eb;
+        border-radius: 12px;
+        padding: 32px 16px !important;
+        margin: 32px 0 !important;
+        text-align: center;
+      }
+
+      .title {
+        color: #1e40af;
+        font-weight: 700;
+        font-size: 32px !important;
+        line-height: 1 !important;
+        letter-spacing: 8px !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+
+      .otp_label {
+        font-size: 12px !important;
+        color: #6b7280;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 1px !important;
+        margin-bottom: 12px !important;
+      }
+
+      .otp_validity {
+        font-size: 14px !important;
+        color: #6b7280;
+        margin-top: 12px !important;
+      }
+
+      .regard_div {
+        margin: 32px 0 !important;
+      }
+
+      .regard_text {
+        font-size: 16px !important;
+        line-height: 24px !important;
+        margin-bottom: 4px !important;
+        font-weight: 500;
+        color: #111827;
+      }
+
+      .regard_team {
+        font-size: 16px !important;
+        line-height: 24px !important;
+        font-weight: 400;
+        color: #6b7280;
+      }
+
+      .footer_div {
+        background-color: #f9fafb;
+        padding: 32px 40px !important;
+        border-top: 1px solid #e5e7eb;
+        border-radius: 0 0 16px 16px !important;
+      }
+
+      .footer_text {
+        font-size: 14px !important;
+        color: #6b7280;
+        margin-bottom: 8px !important;
+        text-align: center;
+        line-height: 20px !important;
+      }
+
+      .support_link {
+        color: #2563eb !important;
+        font-weight: 500;
+        border-bottom: 1px solid #2563eb;
+      }
+
+      @media (max-width: 769px) {
+        .body {
+          width: unset !important;
+          padding: 32px 24px !important;
+        }
+
+        .main_div {
+          width: unset !important;
+        }
+      }
+
+      @media (max-width: 540px) {
+        .top_div {
+          padding: 32px 24px !important;
+        }
+
+        .user_name {
+          font-size: 20px !important;
+        }
+
+        .content_text {
+          font-size: 15px !important;
+        }
+
+        .title {
+          font-size: 28px !important;
+          letter-spacing: 6px !important;
+        }
+
+        .footer_div {
+          padding: 24px !important;
+        }
+      }
+    </style>
+  </head>
+  <body class="body">
+    <div class="main_div">
+      <section class="top_div">
+        <p class="user_name">Hi {{name}},</p>
+        <p class="content_text">
+          Thank you for signing up with <span class="content_text_span">Kochanet Chat</span>!
+          Please use the verification code below to verify your email address and complete your registration:
+        </p>
+
+        <div class="otp_div">
+          <p class="otp_label">Verification Code</p>
+          <h1 class="title">{{otp}}</h1>
+          <p class="otp_validity">This code is valid for 10 minutes</p>
+        </div>
+
+        <p class="content_text">
+          If you didn't create an account with Kochanet Chat, you can safely ignore this email.
+        </p>
+
+        <p class="content_text">
+          Need help? Contact our support team at
+          <a href="mailto:support@kochanet.com" class="support_link">support@kochanet.com</a>
+        </p>
+
+        <div class="regard_div">
+          <p class="regard_text">Best regards,</p>
+          <p class="regard_team">The Kochanet Team</p>
+        </div>
+      </section>
+
+      <section class="footer_div">
+        <p class="footer_text">
+          This is an automated message. Please do not reply to this email.
+        </p>
+        <p class="footer_text">
+          © {{year}} Kochanet Chat. All rights reserved.
+        </p>
+      </section>
+    </div>
+  </body>
+</html>
