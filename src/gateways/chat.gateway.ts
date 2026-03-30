@@ -198,7 +198,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         .emit('message:new', message);
 
       // Send mention notifications to mentioned users
-      if (message.mentions && message.mentions.length > 0) {
+      if (message && message.mentions && message.mentions.length > 0) {
         await this.notifyMentionedUsers(message, userId);
       }
 
