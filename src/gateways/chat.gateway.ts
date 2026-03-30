@@ -13,6 +13,7 @@ import { Inject, forwardRef } from '@nestjs/common';
 import { MessagesService } from '../messages/messages.service';
 import { AIService } from '../ai/ai.service';
 import { UsersService } from '../users/users.service';
+import { ChatService } from '../chat/chat.service';
 import { UserStatus } from '../interfaces/user.interface';
 import { CreateMessageDto } from '../messages/dto/create-message.dto';
 
@@ -40,6 +41,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @Inject(forwardRef(() => AIService))
     private aiService: AIService,
     private usersService: UsersService,
+    private chatService: ChatService,
   ) {}
 
   async handleConnection(client: AuthenticatedSocket) {
@@ -195,6 +197,11 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         .to(`chat:${createMessageDto.chatId}`)
         .emit('message:new', message);
 
+      // Send mention notifications to mentioned users
+      if (message.mentions && message.mentions.length > 0) {
+        await this.notifyMentionedUsers(message, userId);
+      }
+
       // Check for AI mention
       if (this.aiService.checkForAIMention(createMessageDto.content)) {
         // Process AI response asynchronously
@@ -316,5 +323,62 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   broadcastMessage(chatId: string, message: any) {
     console.log(`Broadcasting message to chat:${chatId}`, message._id);
     this.server.to(`chat:${chatId}`).emit('message:new', message);
+  }
+
+  // Private method to notify mentioned users
+  private async notifyMentionedUsers(message: any, senderId: string) {
+    try {
+      // Get chat to access participants
+      const chat = await this.chatService.getChatByIdInternal(
+        message.chatId.toString(),
+      );
+
+      if (!chat) {
+        console.log('Chat not found for mentions notification');
+        return;
+      }
+
+      // Get all users in the chat
+      const participantIds = chat.participants.map((p) => p.toString());
+      const chatParticipants = await this.usersService.getUsersByIds(
+        participantIds,
+      );
+
+      // Find mentioned users by username
+      for (const mentionedUsername of message.mentions) {
+        const mentionedUser = chatParticipants.find(
+          (user) =>
+            user.name.toLowerCase() === mentionedUsername ||
+            user.email.toLowerCase().split('@')[0] === mentionedUsername,
+        );
+
+        if (mentionedUser && mentionedUser._id.toString() !== senderId) {
+          // Get socket IDs for the mentioned user
+          const socketIds = this.userSockets.get(
+            mentionedUser._id.toString(),
+          );
+
+          if (socketIds && socketIds.length > 0) {
+            // Send mention notification to each socket
+            socketIds.forEach((socketId) => {
+              this.server.to(socketId).emit('user:mentioned', {
+                messageId: message._id,
+                chatId: message.chatId,
+                senderId: senderId,
+                senderName: message.senderId?.name || 'Someone',
+                content: message.content,
+                mentionedUsername: mentionedUsername,
+              });
+            });
+
+            console.log(
+              `Notified user ${mentionedUser.name} about mention in message ${message._id}`,
+            );
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error notifying mentioned users:', error);
+    }
   }
 }

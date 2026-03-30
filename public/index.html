@@ -709,6 +709,90 @@
                 max-width: 80%;
             }
         }
+
+        /* Mention Autocomplete */
+        .mention-autocomplete {
+            position: absolute;
+            bottom: 100%;
+            left: 0;
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+            min-width: 200px;
+        }
+
+        .mention-autocomplete.active {
+            display: block;
+        }
+
+        .mention-item {
+            padding: 10px 15px;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .mention-item:hover {
+            background: #f0f4f8;
+        }
+
+        .mention-item-avatar {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: #1a73e8;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .mention-item-info {
+            flex: 1;
+        }
+
+        .mention-item-name {
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .mention-item-username {
+            font-size: 12px;
+            color: #666;
+        }
+
+        /* Mention styling in messages */
+        .mention {
+            background: #e8f4fd;
+            color: #1a73e8;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-weight: 500;
+        }
+
+        .mention:hover {
+            background: #d0e8f9;
+        }
+
+        /* Mention notification badge */
+        .mention-badge {
+            background: #ff6b6b;
+            color: white;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 10px;
+            margin-left: 5px;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -835,17 +919,21 @@
                     </div>
 
                     <div class="message-input-container">
-                        <div class="message-input-wrapper">
+                        <div class="message-input-wrapper" style="position: relative;">
+                            <!-- Mention Autocomplete Dropdown -->
+                            <div class="mention-autocomplete" id="mentionAutocomplete"></div>
+
                             <button class="voice-btn" id="voiceBtn" onclick="toggleVoiceRecording()" title="Voice message">
                                 <span id="voiceIcon">🎤</span>
                             </button>
                             <textarea
                                 class="message-input"
                                 id="messageInput"
-                                placeholder="Type a message... (Use @AI to mention the AI assistant)"
+                                placeholder="Type a message... (Use @username to mention users, @AI for AI assistant)"
                                 rows="1"
                                 onkeypress="handleMessageKeyPress(event)"
                                 oninput="handleTyping()"
+                                onkeydown="handleMentionKeydown(event)"
                             ></textarea>
                             <button class="send-btn" onclick="sendMessage()">Send</button>
                         </div>
@@ -895,6 +983,13 @@
         let mediaRecorder = null;
         let audioChunks = [];
         let isRecording = false;
+
+        // Mention-related variables
+        let mentionAutocompleteActive = false;
+        let mentionQuery = '';
+        let mentionStartPos = -1;
+        let currentMentionUsers = [];
+        let selectedMentionIndex = 0;
 
         // Auth Functions
         function handleGoogleLogin() {
@@ -1061,6 +1156,18 @@
                 loadChats();
             });
 
+            socket.on('user:mentioned', (data) => {
+                console.log('You were mentioned in a message:', data);
+                // Show notification
+                if (Notification.permission === 'granted') {
+                    new Notification(`${data.senderName} mentioned you`, {
+                        body: data.content.substring(0, 100),
+                        icon: '/favicon.ico'
+                    });
+                }
+                // You could also show an in-app notification here
+            });
+
             socket.on('error', (error) => {
                 console.error('Socket error:', error);
             });
@@ -1192,10 +1299,13 @@
             const time = new Date(message.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
             const aiBadge = message.isAI ? '<span class="ai-badge">AI</span>' : '';
 
+            // Highlight mentions in message content
+            const contentWithMentions = highlightMentions(escapeHtml(message.content));
+
             messageDiv.innerHTML = `
                 <div class="message-content">
                     ${!isOwn ? `<div class="message-sender">${senderName}${aiBadge}</div>` : ''}
-                    <div class="message-text">${escapeHtml(message.content)}</div>
+                    <div class="message-text">${contentWithMentions}</div>
                     <div class="message-time">${time}</div>
                 </div>
             `;
@@ -1228,6 +1338,9 @@
 
         function handleTyping() {
             if (!currentChatId) return;
+
+            // Check for mention trigger
+            checkForMentionTrigger();
 
             socket.emit('typing:start', { chatId: currentChatId });
 
@@ -1367,6 +1480,130 @@
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
+        }
+
+        // Highlight mentions in message text
+        function highlightMentions(text) {
+            // Replace @username with highlighted version
+            return text.replace(/@(\w+)/g, '<span class="mention">@$1</span>');
+        }
+
+        // Mention Autocomplete Functions
+        function showMentionAutocomplete(users) {
+            const autocomplete = document.getElementById('mentionAutocomplete');
+            autocomplete.innerHTML = '';
+
+            if (users.length === 0) {
+                autocomplete.classList.remove('active');
+                return;
+            }
+
+            users.forEach((user, index) => {
+                const item = document.createElement('div');
+                item.className = 'mention-item';
+                if (index === selectedMentionIndex) {
+                    item.style.background = '#f0f4f8';
+                }
+
+                item.innerHTML = `
+                    <div class="mention-item-avatar">${user.name[0].toUpperCase()}</div>
+                    <div class="mention-item-info">
+                        <div class="mention-item-name">${user.name}</div>
+                        <div class="mention-item-username">@${user.name.toLowerCase()}</div>
+                    </div>
+                `;
+
+                item.onclick = () => {
+                    selectMention(user);
+                };
+
+                autocomplete.appendChild(item);
+            });
+
+            autocomplete.classList.add('active');
+            currentMentionUsers = users;
+        }
+
+        function hideMentionAutocomplete() {
+            document.getElementById('mentionAutocomplete').classList.remove('active');
+            mentionAutocompleteActive = false;
+            mentionQuery = '';
+            mentionStartPos = -1;
+            currentMentionUsers = [];
+            selectedMentionIndex = 0;
+        }
+
+        function selectMention(user) {
+            const input = document.getElementById('messageInput');
+            const value = input.value;
+
+            // Replace @query with @username
+            const before = value.substring(0, mentionStartPos);
+            const after = value.substring(input.selectionStart);
+            const mention = `@${user.name.toLowerCase()}`;
+
+            input.value = before + mention + ' ' + after;
+            input.selectionStart = input.selectionEnd = before.length + mention.length + 1;
+
+            hideMentionAutocomplete();
+            input.focus();
+        }
+
+        function handleMentionKeydown(event) {
+            if (!mentionAutocompleteActive || currentMentionUsers.length === 0) return;
+
+            if (event.key === 'ArrowDown') {
+                event.preventDefault();
+                selectedMentionIndex = (selectedMentionIndex + 1) % currentMentionUsers.length;
+                showMentionAutocomplete(currentMentionUsers);
+            } else if (event.key === 'ArrowUp') {
+                event.preventDefault();
+                selectedMentionIndex = selectedMentionIndex === 0 ? currentMentionUsers.length - 1 : selectedMentionIndex - 1;
+                showMentionAutocomplete(currentMentionUsers);
+            } else if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                if (currentMentionUsers[selectedMentionIndex]) {
+                    selectMention(currentMentionUsers[selectedMentionIndex]);
+                }
+            } else if (event.key === 'Escape') {
+                hideMentionAutocomplete();
+            }
+        }
+
+        function checkForMentionTrigger() {
+            const input = document.getElementById('messageInput');
+            const value = input.value;
+            const cursorPos = input.selectionStart;
+
+            // Find the last @ before cursor
+            const textBeforeCursor = value.substring(0, cursorPos);
+            const lastAtIndex = textBeforeCursor.lastIndexOf('@');
+
+            if (lastAtIndex === -1) {
+                hideMentionAutocomplete();
+                return;
+            }
+
+            // Check if there's a space between @ and cursor
+            const textAfterAt = textBeforeCursor.substring(lastAtIndex + 1);
+            if (textAfterAt.includes(' ')) {
+                hideMentionAutocomplete();
+                return;
+            }
+
+            // Extract mention query
+            mentionQuery = textAfterAt.toLowerCase();
+            mentionStartPos = lastAtIndex;
+            mentionAutocompleteActive = true;
+
+            // Filter users based on query
+            const filteredUsers = allUsers.filter(user =>
+                user.name.toLowerCase().startsWith(mentionQuery) ||
+                user.email.toLowerCase().startsWith(mentionQuery)
+            ).slice(0, 5); // Limit to 5 suggestions
+
+            selectedMentionIndex = 0;
+            showMentionAutocomplete(filteredUsers);
         }
 
         // Voice Recording Functions
