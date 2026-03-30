@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify Email - Kochanet Chat</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f7fa;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            max-width: 400px;
+            width: 100%;
+            padding: 40px;
+            border: 1px solid #e1e8ed;
+            animation: slideUp 0.5s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .logo h1 {
+            color: #2c3e50;
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .logo p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        h2 {
+            color: #2c3e50;
+            font-size: 24px;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .subtitle {
+            color: #666;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .user-email {
+            background: #f0f4f8;
+            padding: 10px;
+            border-radius: 6px;
+            text-align: center;
+            margin-bottom: 20px;
+            font-weight: 500;
+            color: #1a73e8;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            color: #333;
+            font-weight: 500;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #eee;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            outline: none;
+            text-align: center;
+            letter-spacing: 0.5em;
+            font-weight: 600;
+            font-size: 18px;
+        }
+
+        input:focus {
+            border-color: #1a73e8;
+            outline: none;
+        }
+
+        input:disabled {
+            background-color: #f5f5f5;
+            cursor: not-allowed;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #1a73e8;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        button:hover:not(:disabled) {
+            background: #1557b0;
+        }
+
+        button:active:not(:disabled) {
+            background: #0d47a1;
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .message {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .message.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            display: block;
+        }
+
+        .message.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            display: block;
+        }
+
+        .links {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+
+        .links a {
+            color: #1a73e8;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+
+        .links a:hover {
+            color: #1557b0;
+            text-decoration: underline;
+        }
+
+        .links .divider {
+            margin: 0 10px;
+            color: #ccc;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 0.8s linear infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .info-box {
+            background: #e8f4fd;
+            border-left: 4px solid #1a73e8;
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            color: #333;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">
+            <h1>Kochanet</h1>
+            <p>Collaborative Chat Platform</p>
+        </div>
+
+        <h2>Verify Your Email</h2>
+        <p class="subtitle">
+            We've sent a verification code to your email address.
+        </p>
+
+        <div id="userEmail" class="user-email"></div>
+
+        <div class="info-box">
+            📧 Please check your email inbox (and spam folder) for the 6-digit verification code.
+        </div>
+
+        <div id="messageBox" class="message"></div>
+
+        <form id="verifyOtpForm">
+            <div class="form-group">
+                <label for="otp">Verification Code</label>
+                <input
+                    type="text"
+                    id="otp"
+                    name="otp"
+                    placeholder="000000"
+                    required
+                    maxlength="6"
+                    pattern="[0-9]{6}"
+                    autocomplete="off"
+                >
+            </div>
+
+            <button type="submit" id="submitBtn">
+                Verify Email
+            </button>
+        </form>
+
+        <div class="links">
+            <a href="/resend-otp.html" id="resendLink">Resend Code</a>
+            <span class="divider">|</span>
+            <a href="/">Back to Login</a>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('verifyOtpForm');
+        const submitBtn = document.getElementById('submitBtn');
+        const messageBox = document.getElementById('messageBox');
+        const otpInput = document.getElementById('otp');
+        const userEmailDiv = document.getElementById('userEmail');
+        const resendLink = document.getElementById('resendLink');
+
+        // Get API base URL from current location
+        const API_BASE_URL = window.location.origin;
+
+        // Get email from URL parameter
+        const urlParams = new URLSearchParams(window.location.search);
+        const email = urlParams.get('email');
+
+        if (email) {
+            userEmailDiv.textContent = email;
+            // Add email to resend link
+            resendLink.href = `/resend-otp.html?email=${encodeURIComponent(email)}`;
+        } else {
+            // If no email in URL, redirect to registration
+            showMessage('No email provided. Please register first.', 'error');
+            setTimeout(() => {
+                window.location.href = '/';
+            }, 2000);
+        }
+
+        function showMessage(message, type) {
+            messageBox.textContent = message;
+            messageBox.className = `message ${type}`;
+            messageBox.style.display = 'block';
+        }
+
+        function hideMessage() {
+            messageBox.style.display = 'none';
+        }
+
+        // Auto-focus OTP input
+        otpInput.focus();
+
+        // Only allow numbers in OTP input
+        otpInput.addEventListener('input', (e) => {
+            e.target.value = e.target.value.replace(/[^0-9]/g, '');
+        });
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            hideMessage();
+
+            const otp = otpInput.value.trim();
+
+            if (!otp || otp.length !== 6) {
+                showMessage('Please enter a valid 6-digit code', 'error');
+                return;
+            }
+
+            if (!email) {
+                showMessage('Email not found. Please try again.', 'error');
+                return;
+            }
+
+            // Disable form
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner"></span> Verifying...';
+            otpInput.disabled = true;
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/auth/verify-email`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email, otp }),
+                });
+
+                const data = await response.json();
+
+                if (response.ok || data.success) {
+                    showMessage(
+                        'Email verified successfully! Redirecting to login...',
+                        'success'
+                    );
+
+                    // Redirect to login after 2 seconds
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 2000);
+                } else {
+                    showMessage(
+                        data.message || 'Invalid or expired code. Please try again.',
+                        'error'
+                    );
+                    // Re-enable form
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = 'Verify Email';
+                    otpInput.disabled = false;
+                    otpInput.value = '';
+                    otpInput.focus();
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showMessage(
+                    'An error occurred. Please check your internet connection and try again.',
+                    'error'
+                );
+                // Re-enable form
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'Verify Email';
+                otpInput.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>

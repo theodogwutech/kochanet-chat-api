@@ -961,9 +961,12 @@
                 const data = await response.json();
 
                 if (data.success) {
-                    document.getElementById('registerSuccess').textContent = 'Registration successful! Please check your email to verify your account.';
+                    document.getElementById('registerSuccess').textContent = 'Registration successful! Redirecting to verification page...';
                     document.getElementById('registerError').textContent = '';
-                    setTimeout(() => switchAuthTab('login'), 2000);
+                    // Redirect to OTP entry page with email
+                    setTimeout(() => {
+                        window.location.href = `/enter-otp.html?email=${encodeURIComponent(email)}`;
+                    }, 1500);
                 } else {
                     document.getElementById('registerError').textContent = data.message;
                     document.getElementById('registerSuccess').textContent = '';
