@@ -8,12 +8,14 @@ A real-time collaborative chat backend built with Nest.js, featuring an on-deman
 - [Features](#features)
 - [Tech Stack](#tech-stack)
 - [Architecture](#architecture)
+- [Live Demo & Testing](#live-demo--testing)
 - [Getting Started](#getting-started)
 - [API Documentation](#api-documentation)
 - [WebSocket Events](#websocket-events)
 - [Environment Variables](#environment-variables)
 - [Project Structure](#project-structure)
 - [Design Decisions](#design-decisions)
+- [Advanced Features Implemented](#advanced-features-implemented)
 - [Known Limitations](#known-limitations)
 - [Future Improvements](#future-improvements)
 
@@ -30,6 +32,28 @@ This project implements a collaborative team workspace backend where users can:
 The AI assistant acts as a helpful team member that can be summoned when needed, understanding conversation context to provide relevant assistance.
 
 ## Features
+
+### Advanced Features ⭐
+
+#### Message Management
+- **Message Editing**: Edit sent messages with visual "(edited)" indicators
+- **Message Reactions**: React to messages with emojis; view all reactions from participants
+- **Message Search**: Full-text search within conversations using regex patterns
+- **Read Receipts**: Visual indicators showing message delivery and read status (✓ sent, ✓✓ read)
+
+#### AI Assistant
+- **Streaming Responses**: AI responses stream token-by-token for natural interaction
+- **Smart Context**: AI maintains conversation context with configurable token limits (20 messages, 2000 tokens)
+- **Rate Limiting**: Per-user rate limiting (10 requests per 5-minute window) to prevent abuse
+- **AI References**: Copy timestamped references to AI messages with URL navigation
+
+#### Organization
+- **Conversation Tags**: Add custom tags to organize chats (e.g., "work", "urgent", "project-x")
+- **Tag Management**: Auto-sanitization, deduplication, and lowercase normalization
+
+#### Testing & Quality
+- **Unit Tests**: 27 comprehensive test cases covering Messages, Chat, and AI services
+- **Test Isolation**: All tests use mocked dependencies for fast, reliable execution
 
 ### Core Features
 
@@ -166,6 +190,77 @@ The AI service:
 4. Streams responses back to the chat room
 5. Manages context window to stay within token limits
 6. Handles errors gracefully with user-friendly messages
+
+## Live Demo & Testing
+
+### Deployed Application
+
+**Base URL**: `https://kochanet-90997f56875d.herokuapp.com`
+
+**API Documentation**: [Postman Documentation](https://documenter.getpostman.com/view/53597383/2sBXinGq6F)
+
+### Test Credentials
+
+Use these pre-configured accounts to test the application:
+
+1. **Charlie**
+   - Email: `charlie@gmail.com`
+   - Password: `12345678`
+
+2. **Kelvin**
+   - Email: `kelvin@gmail.com`
+   - Password: `12345678`
+
+3. **Richard**
+   - Email: `richard@gmail.com`
+   - Password: `12345678`
+
+### Testing Real-Time Features
+
+To fully test the real-time collaborative features:
+
+1. **Open the application in two browser windows** (or use different browsers)
+2. **Login with different test accounts** in each window (e.g., Charlie in one, Kelvin in another)
+3. **Test the following features**:
+   - Create a new chat between the two users
+   - Send messages and observe instant delivery
+   - Test typing indicators (start typing and see the indicator in the other window)
+   - Observe online/offline status changes
+   - Test read receipts by opening messages
+
+### Testing AI Assistant
+
+1. **Login to the application**
+2. **Create or open a chat**
+3. **Mention the AI assistant** by typing `@ai` followed by your question
+   - Example: `@ai What is the weather like today?`
+   - Example: `@ai Can you help me with this problem?`
+4. **Watch the AI response stream** in real-time
+5. **Test contextual understanding** by asking follow-up questions
+
+### Testing Advanced Features
+
+**Message Editing**:
+- Hover over your own message and click the edit button (✏️)
+- Modify the content and save
+- Notice the "(edited)" indicator
+
+**Message Reactions**:
+- Click the "Add Reaction" button on any message
+- Select an emoji to react
+- Multiple users can react to the same message
+
+**Message Search**:
+- Use the search bar to find messages within a chat
+- Results are highlighted and scrollable
+
+**Conversation Tags**:
+- Add tags to organize your chats (e.g., "work", "urgent")
+- Tags appear as colored chips in the chat list
+
+**AI Reference with Timestamps**:
+- Click the 📎 button on AI messages to copy a timestamped reference
+- Use these references to link back to specific AI responses
 
 ## Getting Started
 
@@ -488,8 +583,11 @@ Required variables in `.env`:
 | `GOOGLE_CALLBACK_URL` | OAuth callback | `http://localhost:3000/auth/google/callback` |
 | `CORS_ORIGIN` | CORS allowed origin | `http://localhost:3001` |
 | `AI_ASSISTANT_NAME` | AI name for @mentions | `AI` |
-| `AI_MODEL` | OpenAI model | `gpt-4-turbo-preview` |
+| `AI_MODEL` | OpenAI model | `gpt-4o-mini` |
 | `AI_MAX_CONTEXT_MESSAGES` | Context window size | `20` |
+| `AI_MAX_CONTEXT_TOKENS` | Max tokens in context | `2000` |
+| `AI_RATE_LIMIT` | Requests per window | `10` |
+| `AI_RATE_LIMIT_WINDOW` | Window in minutes | `5` |
 
 ## Project Structure
 
@@ -636,88 +734,90 @@ Requires valid Google OAuth credentials to test.
 
 **Workaround**: Use email/password authentication for testing.
 
-### 3. Message Editing
-Currently not supported. Messages are immutable once sent.
-
-**Future**: Add edit functionality with version history.
-
-### 4. Read Receipts
-Basic implementation exists but not exposed via WebSocket events.
-
-**Future**: Emit read receipt events to all chat participants.
-
-### 5. File Attachments
+### 3. File Attachments
 Only text and voice messages supported. No images/documents.
 
 **Future**: Add file upload service and attachment handling.
 
-### 6. Message Search
-Full-text search within conversations not implemented.
+### 4. Scalability Considerations
+Current implementation uses in-memory rate limiting and WebSocket state management:
+- Rate limiting works per instance (doesn't scale horizontally)
+- Socket connections tied to specific server instances
 
-**Future**: Add MongoDB text indexes and search endpoints.
+**Production Requirement**:
+- Implement Redis for distributed rate limiting
+- Use Redis adapter for Socket.io for multi-server deployments
+- Add session affinity or sticky sessions for load balancing
 
-### 7. Rate Limiting
-No rate limiting on API or WebSocket events.
+## Advanced Features Implemented
 
-**Production Requirement**: Add @nestjs/throttler for protection.
+The following advanced features have been successfully implemented:
 
-### 8. Deployment Configuration
-Application ready for deployment but requires:
-- Production MongoDB instance
-- Environment-specific configuration
-- Process manager (PM2) or containerization (Docker)
+### ✅ Real-Time Features
+- **Streaming AI Responses**: AI responses stream token-by-token for a natural typing experience
+- **Smart Context Management**: AI maintains conversation context with configurable token limits
+- **Message Editing**: Edit your messages with version tracking and visual indicators
+- **Message Reactions**: React to messages with emojis; multiple users can react
+- **Read Receipts**: Visual indicators showing message delivery and read status
+- **Typing Indicators**: Real-time feedback when users are composing messages
+
+### ✅ AI Features
+- **Rate Limiting**: Per-user rate limiting (10 requests per 5-minute window) to prevent abuse
+- **Context-Aware Responses**: AI analyzes recent conversation history for relevant answers
+- **AI Reference System**: Copy timestamped references to AI messages with URL navigation
+- **Error Handling**: Graceful degradation with user-friendly error messages
+
+### ✅ Search & Organization
+- **Message Search**: Full-text search within conversations with regex support
+- **Conversation Tags**: Organize chats with custom tags (e.g., "work", "urgent")
+- **Tag Management**: Add/remove tags with auto-sanitization and deduplication
+
+### ✅ Testing
+- **Unit Tests**: Comprehensive test coverage for Messages, Chat, and AI services
+- **Test Isolation**: All tests use mocked dependencies for fast, reliable execution
+- **27 Test Cases**: Covering critical business logic, edge cases, and error scenarios
 
 ## Future Improvements
 
 ### With More Time
 
 #### High Priority
-1. **Comprehensive Testing**
-   - Unit tests for all services
-   - Integration tests for API endpoints
-   - E2E tests for WebSocket flows
-   - Test coverage > 80%
-
-2. **Advanced AI Features**
-   - Streaming AI responses (show as typing)
-   - Smart context summarization for long conversations
-   - AI personality customization per workspace
-   - Multiple AI assistants with different expertise
-
-3. **Production Hardening**
-   - Rate limiting and throttling
+1. **Production Hardening**
+   - Distributed rate limiting with Redis
    - Request logging and monitoring
    - Error tracking (Sentry)
    - Performance monitoring (APM)
 
-4. **Security Enhancements**
+2. **Security Enhancements**
    - Token refresh mechanism
    - Token blacklisting for logout
    - 2FA authentication
    - Audit logs for sensitive actions
 
+3. **AI Enhancements**
+   - AI personality customization per workspace
+   - Multiple AI assistants with different expertise
+   - Conversation summarization for long threads
+   - AI response regeneration option
+
 #### Medium Priority
-5. **User Experience**
-   - Message reactions (emojis)
+4. **User Experience**
    - Threaded conversations
    - Message pinning
    - User @mentions autocomplete
-
-6. **Chat Features**
-   - Message editing with history
    - Message deletion (soft delete)
    - Chat archiving
    - Starred/favorite chats
 
-7. **Voice Enhancements**
+5. **Voice Enhancements**
    - Real-time voice streaming
    - Voice message waveform visualization
    - Playback speed control
 
-8. **Search & Discovery**
-   - Full-text message search
+6. **Search & Discovery**
    - User search with filters
    - Chat history export
+   - Advanced search filters (date range, sender, etc.)
 
 #### Nice to Have
 9. **Integrations**
