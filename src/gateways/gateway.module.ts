@@ -4,6 +4,7 @@ import { MessagesModule } from '../messages/messages.module';
 import { AIModule } from '../ai/ai.module';
 import { UsersModule } from '../users/users.module';
 import { AuthModule } from '../auth/auth.module';
+import { ChatModule } from '../chat/chat.module';
 
 @Module({
   imports: [
@@ -11,6 +12,7 @@ import { AuthModule } from '../auth/auth.module';
     forwardRef(() => AIModule),
     forwardRef(() => UsersModule),
     forwardRef(() => AuthModule),
+    forwardRef(() => ChatModule),
   ],
   providers: [ChatGateway],
   exports: [ChatGateway],

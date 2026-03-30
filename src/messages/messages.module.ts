@@ -13,7 +13,7 @@ import { UsersModule } from '../users/users.module';
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: 'Message', schema: MessageSchema }]),
-    ChatModule,
+    forwardRef(() => ChatModule),
     forwardRef(() => AuthModule),
     forwardRef(() => UsersModule),
   ],
