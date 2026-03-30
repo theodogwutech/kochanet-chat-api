@@ -43,10 +43,16 @@ export class AIService {
     this.rateLimit = parseInt(
       this.configService.get<string>('AI_RATE_LIMIT') || '10',
     ); // 10 requests
-    this.rateLimitWindow = parseInt(this.configService.get<string>('AI_RATE_LIMIT_WINDOW') || '5') * 60000; // 5 minutes in ms
+    this.rateLimitWindow =
+      parseInt(this.configService.get<string>('AI_RATE_LIMIT_WINDOW') || '5') *
+      60000; // 5 minutes in ms
   }
 
-  private checkRateLimit(userId: string): { allowed: boolean; remaining: number; resetTime: number } {
+  private checkRateLimit(userId: string): {
+    allowed: boolean;
+    remaining: number;
+    resetTime: number;
+  } {
     const now = Date.now();
     const userLimit = this.userRequestCounts.get(userId);
 
@@ -142,14 +148,21 @@ export class AIService {
     chatId: string,
     mentionMessage: IMessageDocument,
     userId?: string,
-  ): AsyncGenerator<{ type: string; content?: string; data?: any; rateLimit?: any }> {
+  ): AsyncGenerator<{
+    type: string;
+    content?: string;
+    data?: any;
+    rateLimit?: any;
+  }> {
     try {
       // Check rate limit if userId is provided
       if (userId) {
         const rateLimitCheck = this.checkRateLimit(userId);
 
         if (!rateLimitCheck.allowed) {
-          const resetTimeMinutes = Math.ceil((rateLimitCheck.resetTime - Date.now()) / 60000);
+          const resetTimeMinutes = Math.ceil(
+            (rateLimitCheck.resetTime - Date.now()) / 60000,
+          );
           yield {
             type: 'error',
             content: `Rate limit exceeded. You can make ${this.rateLimit} AI requests every ${this.rateLimitWindow / 60000} minutes. Please try again in ${resetTimeMinutes} minute(s).`,
@@ -266,7 +279,9 @@ export class AIService {
         max_tokens: 200,
       });
 
-      return completion.choices[0]?.message?.content || 'Unable to generate summary.';
+      return (
+        completion.choices[0]?.message?.content || 'Unable to generate summary.'
+      );
     } catch (error) {
       console.error('Error summarizing conversation:', error);
       return 'Previous conversation context unavailable.';

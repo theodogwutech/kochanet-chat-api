@@ -8,6 +8,8 @@ import {
   Delete,
   UseGuards,
   Res,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { Response } from 'express';
 import { ChatService } from './chat.service';
@@ -17,6 +19,7 @@ import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { ResponseUtil } from '../common/utils/response.util';
 import { IUserDocument } from 'src/interfaces/user.interface';
+import { ChatGateway } from '../gateways/chat.gateway';
 
 @Controller('chat')
 @UseGuards(JwtAuthGuard)
@@ -24,6 +27,8 @@ export class ChatController {
   constructor(
     private readonly chatService: ChatService,
     private readonly utils: ResponseUtil,
+    @Inject(forwardRef(() => ChatGateway))
+    private readonly chatGateway: ChatGateway,
   ) {}
 
   @Post()
@@ -36,6 +41,11 @@ export class ChatController {
       userId: user._id.toString(),
       createChatDto,
     });
+
+    // Emit WebSocket event to all participants to update their chat lists
+    if (result.success && result.data) {
+      this.chatGateway.notifyChatCreated(result.data);
+    }
 
     this.utils.apiResponse({
       res,

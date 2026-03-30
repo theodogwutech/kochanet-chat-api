@@ -492,4 +492,31 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       console.error('Error notifying mentioned users:', error);
     }
   }
+
+  /**
+   * Notify all participants when a new chat is created
+   */
+  notifyChatCreated(chat: any) {
+    try {
+      // Emit to all participants so they see the new chat in their list
+      chat.participants.forEach((participant: any) => {
+        const participantId =
+          typeof participant === 'string'
+            ? participant
+            : participant._id.toString();
+        const socketIds = this.userSockets.get(participantId);
+
+        if (socketIds) {
+          socketIds.forEach((socketId) => {
+            this.server.to(socketId).emit('chat:created', chat);
+          });
+          console.log(
+            `Notified user ${participantId} about new chat ${chat._id}`,
+          );
+        }
+      });
+    } catch (error) {
+      console.error('Error notifying chat created:', error);
+    }
+  }
 }

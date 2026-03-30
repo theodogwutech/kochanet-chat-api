@@ -8,12 +8,14 @@ import { ResponseUtil } from '../common/utils/response.util';
 import { AuthenticationMiddleware } from '../common/middleware/auth.middleware';
 import { AuthModule } from '../auth/auth.module';
 import { UsersModule } from '../users/users.module';
+import { GatewayModule } from '../gateways/gateway.module';
 
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: 'Chat', schema: ChatSchema }]),
     forwardRef(() => AuthModule),
     forwardRef(() => UsersModule),
+    forwardRef(() => GatewayModule),
   ],
   controllers: [ChatController],
   providers: [ChatService, ChatRepository, ResponseUtil, AuthenticationMiddleware],

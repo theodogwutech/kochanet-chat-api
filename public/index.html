@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kochanet Chat - Real-time Messaging</title>
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <link href="https://api.fontshare.com/v2/css?f[]=satoshi@1,900,700,500,301,701,300,501,401,901,400,2&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -13,7 +14,7 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Satoshi', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', sans-serif;
             background: #f5f7fa;
             height: 100vh;
             display: flex;
@@ -1642,6 +1643,12 @@
             socket.on('chat:updated', (chatData) => {
                 console.log('Chat updated:', chatData);
                 // Reload chat list to show updates
+                loadChats();
+            });
+
+            socket.on('chat:created', (chatData) => {
+                console.log('New chat created:', chatData);
+                // Reload chat list to show the newly created chat
                 loadChats();
             });
 
